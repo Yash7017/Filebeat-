@@ -30,43 +30,71 @@ sudo nano /etc/filebeat/filebeat.yml
 Copy and paste the given configuration. change paths, log_type and public ip of master server based on your setup. 
 
 ```
-filebeat.inputs: - type: log
-
-# Change to true to enable this input configuration. enabled: true fields:
-
-11 log_type: access
-
-# Paths that should be crawled and fetched. Glob based paths. paths:
-
-- /var/log/nginx/test-1.access.log
+filebeat.inputs: 
 
 - type: log
 
-enabled: true fields:
+# Change to true to enable this input configuration. 
+enabled: true 
+fields:
+  log_type: access
 
-log_type: errors paths:
+# Paths that should be crawled and fetched. Glob based paths. 
+paths:
+    - /var/log/nginx/*.access.log
+  
 
-- /var/log/nginx/live-1.error.log
+- type: log
+enabled: true 
+fields:
+  log_type: errors 
+ paths:
+    - /var/log/nginx/live-1.error.log
+    
+    
 
 filebeat.config.modules:
+# Glob pattern for configuration loading 
+  path: ${path.config}/modules.d/*.yml
 
-# Glob pattern for configuration loading path: ${path.config}/modules.d/*.yml
+# Set to true to enable config reloading 
+  reload.enabled: false
 
-# Set to true to enable config reloading reload.enabled: false
+setup.kibana: 
+#
+#
+#
 
-setup.kibana: output.logstash:
+output.logstash:
+# The Logstash hosts 
+  hosts: [“public-ip:5044”] 
 
-# The Logstash hosts hosts: [“public-ip:5044”] processors:
-
-- add_host_metadata:
-
-when.not.contains.tags: forwarded
-
-- add_cloud_metadata: ~
-
-12 - add_docker_metadata: ~
-
-- add_kubernetes_metadata: ~
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  #- add_cloud_metadata: ~
+  #-add_docker_metadata: ~
+  #- add_kubernetes_metadata: ~
 
 ```
+
+*Here replace public-ip with your master public ip address. In the updated version of filebeat above 7. you won't be able to use -type : log, there you will have to use -type: filestream. you can check out more input type based on your file type.**
+
+To start your filebeat and check the status, you can run the following commands. 
+```
+sudo service filebeat start
+```
+```
+sudo service filebeat status
+```
+```
+sudo service filebeat stop
+```
+
+**if your filebeat is running in status or failing again and again, then you can run the following command and check where exactly issue is with the filebeat. yml files are too identation sensitive. so there can be issue with that in filebeat.yml file. so check your issue properly by running following command.**
+```
+sudo filebeat -e
+```
+
+Now we can start configuring our logstash. you will have to prepare the grok patterns based on your paths and log file patterns. keep in mind the index name that are gonna be same in both file for logstash rules.conf file and filebeat.yml file. 
 
